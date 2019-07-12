@@ -1,0 +1,51 @@
+<script type="text/javascript">
+    RED.nodes.registerType('glartek-collector', {
+        category: 'glartek',
+        color: '#a6bbcf',
+        defaults: {
+            broker: { value: 'mqtt://broker.hivemq.com:1883', required: true },
+            id: { value: 'id-XIy4eOXHik', required: true },
+            topic: { value: 'topic-XIy4eOXHik', required: true },
+            username: { value: 'username', required: true },
+            password: { value: 'password', required: true },
+            name: { value: '' },
+        },
+        inputs: 1,
+        outputs: 0,
+        icon: 'glartek.png',
+        label: function() {
+            return this.name || 'glartek-collector';
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="glartek-collector">
+    <div class="form-row">
+        <label for="node-input-broker"><i class="fa fa-server"></i> Broker</label>
+        <input type="text" id="node-input-broker" placeholder="Broker">
+    </div>
+    <div class="form-row">
+        <label for="node-input-id"><i class="fa fa-id-card"></i> Id</label>
+        <input type="text" id="node-input-id" placeholder="Id">
+    </div>
+    <div class="form-row">
+        <label for="node-input-topic"><i class="fa fa-hashtag"></i> Topic</label>
+        <input type="text" id="node-input-topic" placeholder="Topic">
+    </div>
+    <div class="form-row">
+        <label for="node-input-username"><i class="fa fa-user"></i> Username</label>
+        <input type="text" id="node-input-username" placeholder="Username">
+    </div>
+    <div class="form-row">
+        <label for="node-input-password"><i class="fa fa-lock"></i> Password</label>
+        <input type="password" id="node-input-password" placeholder="Password">
+    </div>
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="glartek-collector">
+    <p>Glartek Collector</p>
+</script>
