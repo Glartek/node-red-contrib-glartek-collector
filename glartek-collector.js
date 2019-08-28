@@ -38,7 +38,7 @@ module.exports = function(RED) {
             queueQoSZero: false,
         };
 
-        if (config.username) {
+        if (config.username && config.password) {
             options.username = config.username;
             options.password = config.password;
         }
