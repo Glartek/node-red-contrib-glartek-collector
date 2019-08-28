@@ -28,17 +28,22 @@ module.exports = function(RED) {
         manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
         manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
 
-        const client = mqtt.connect(config.broker, {
+        const options = {
             keepalive: 10,
             clientId: config.id,
             clean: false,
             connectTimeout: 5 * 1000,
-            // username: config.username,
-            // password: config.password,
             incomingStore: manager.incoming,
             outgoingStore: manager.outgoing,
             queueQoSZero: false,
-        });
+        };
+
+        if (config.username) {
+            options.username = config.username;
+            options.password = config.password;
+        }
+
+        const client = mqtt.connect(config.broker, options);
 
         client.on('reconnect', function() {
             node.warn('reconnect');
@@ -49,7 +54,9 @@ module.exports = function(RED) {
         });
 
         node.on('input', function(msg) {
-            client.publish(config.topic, JSON.stringify(msg.payload), { qos: 1 });
+            if (msg.payload && typeof msg.payload === 'object') {
+                client.publish(config.topic, JSON.stringify(msg.payload), { qos: 1 });
+            }
         });
 
         GlartekCollectorNode.prototype.close = function() {
