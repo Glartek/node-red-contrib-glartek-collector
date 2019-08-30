@@ -1,8 +1,7 @@
 {
   "name": "node-red-contrib-glartek-collector",
   "description": "Glartek NodeRed IoT Data Collector and Forwarder",
-  "version": "0.1.1",
-  "registry": "https://registry.npmjs.org",
+  "version": "0.1.2",
   "dependencies": {
     "mqtt": "^3.0.0",
     "mqtt-nedb-store": "^0.1.0"
