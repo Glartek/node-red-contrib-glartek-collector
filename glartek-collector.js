@@ -55,7 +55,7 @@ module.exports = function(RED) {
 
         node.on('input', function(msg) {
             if (msg.payload && typeof msg.payload === 'object') {
-                client.publish(config.topic, JSON.stringify(msg.payload), { qos: 1 });
+                client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
             }
         });
 
