@@ -29,30 +29,36 @@ module.exports = function(RED) {
             options.password = config.password;
         }
 
-        // Prepare directory for MQTT Store
-        const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
+        if (config.store == true) {
+            // Prepare directory for MQTT Store
+            const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
 
-        try {
-            if (!fs.existsSync(mqttStoreDir)) {
-                console.log("glartek-collector: Trying to create directory on ", mqttStoreDir);
+            try {
+                if (!fs.existsSync(mqttStoreDir)) {
+                    console.log('glartek-collector: Trying to create directory on ', mqttStoreDir);
 
-                // Create MQTT Store directory
-                fs.mkdirSync(mqttStoreDir, { recursive: true });
+                    // Create MQTT Store directory
+                    fs.mkdirSync(mqttStoreDir, { recursive: true });
 
-                console.log("glartek-collector: Directory created on ", mqttStoreDir);
+                    console.log('glartek-collector: Directory created on ', mqttStoreDir);
+                }
+
+                // HACK: For some reason it is expecting incoming~ and ~outgoing~ to exist
+                fs.closeSync(fs.openSync(mqttStoreDir + 'incoming~', 'w'))
+                fs.closeSync(fs.openSync(mqttStoreDir + 'outgoing~', 'w'))
+
+                // Enable MQTT Store
+                const manager = NeDBStore(mqttStoreDir);
+                
+                manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
+                manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
+
+                options.incomingStore = manager.incoming;
+                options.outgoingStore = manager.outgoing;
             }
-
-            // Enable MQTT Store
-            const manager = NeDBStore(mqttStoreDir);
-            
-            manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
-            manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
-
-            options.incomingStore = manager.incoming;
-            options.outgoingStore = manager.outgoing;
-        }
-        catch (e) {
-            node.error(e);
+            catch (e) {
+                node.error(e);
+            }
         }
 
         const client = mqtt.connect(config.broker, options);
@@ -76,5 +82,5 @@ module.exports = function(RED) {
         }
     }
 
-    RED.nodes.registerType("glartek-collector", GlartekCollectorNode);
+    RED.nodes.registerType('glartek-collector', GlartekCollectorNode);
 }
