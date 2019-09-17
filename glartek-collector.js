@@ -43,7 +43,7 @@ module.exports = function(RED) {
                     console.log('glartek-collector: Directory created on ', mqttStoreDir);
                 }
 
-                // HACK: For some reason it is expecting incoming~ and ~outgoing~ to exist
+                // HACK: For some reason it is expecting incoming~ and outgoing~ to exist
                 fs.closeSync(fs.openSync(mqttStoreDir + 'incoming~', 'w'))
                 fs.closeSync(fs.openSync(mqttStoreDir + 'outgoing~', 'w'))
 
