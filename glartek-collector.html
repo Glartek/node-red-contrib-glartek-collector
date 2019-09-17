@@ -4,7 +4,7 @@
         color: '#a6bbcf',
         defaults: {
             broker: { value: '', required: true },
-            id: { value: '', required: true },
+            clientId: { value: '', required: true },
             topic: { value: '', required: true },
             username: { value: '', required: false },
             password: { value: '', required: false },
@@ -26,8 +26,8 @@
         <input type="text" id="node-input-broker" placeholder="Broker">
     </div>
     <div class="form-row">
-        <label for="node-input-id"><i class="fa fa-id-card"></i> Id</label>
-        <input type="text" id="node-input-id" placeholder="Id">
+        <label for="node-input-clientid"><i class="fa fa-id-card"></i> Client Id</label>
+        <input type="text" id="node-input-clientid" placeholder="Id">
     </div>
     <div class="form-row">
         <label for="node-input-topic"><i class="fa fa-hashtag"></i> Topic</label>
@@ -48,6 +48,11 @@
     <div class="form-row">
         <label for="node-input-store"><i class="fa fa-tag"></i>
         <input type="checkbox" id="node-input-store"> Store</label>
+    </div>
+    <div class="form-row node-text-editor-row">
+        <label for="node-input-store"><i class="fa fa-cog"></i> Store</label>
+        <label for="node-input-store" style="width:70%">
+        <input type="checkbox" id="node-input-store" style="display:inline-block; width:22px; vertical-align:baseline;">Enables MQTT disk store.</label>
     </div>
 </script>
 

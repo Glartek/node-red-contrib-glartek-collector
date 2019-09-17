@@ -13,12 +13,12 @@ module.exports = function(RED) {
 
         // Log current configurations
         console.log('glartek-collector: config.broker (' + config.broker + ')');
-        console.log('glartek-collector: config.id  (' + config.id + ')');
+        console.log('glartek-collector: config.clientId  (' + config.clientId + ')');
         console.log('glartek-collector: config.topic (' + config.topic + ')');
 
         const options = {
             keepalive: 10,
-            clientId: config.id,
+            clientId: config.clientId,
             clean: false,
             connectTimeout: 5 * 1000,
             queueQoSZero: false,
@@ -29,7 +29,7 @@ module.exports = function(RED) {
             options.password = config.password;
         }
 
-        if (config.store == true) {
+        if (config.store) {
             // Prepare directory for MQTT Store
             const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
 
@@ -46,19 +46,20 @@ module.exports = function(RED) {
                 // HACK: For some reason it is expecting incoming~ and outgoing~ to exist
                 fs.closeSync(fs.openSync(mqttStoreDir + 'incoming~', 'w'))
                 fs.closeSync(fs.openSync(mqttStoreDir + 'outgoing~', 'w'))
-
-                // Enable MQTT Store
-                const manager = NeDBStore(mqttStoreDir);
-                
-                manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
-                manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
-
-                options.incomingStore = manager.incoming;
-                options.outgoingStore = manager.outgoing;
             }
             catch (e) {
                 node.error(e);
             }
+
+            // Enable MQTT Store
+            const manager = NeDBStore(mqttStoreDir);
+            
+            manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
+            manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
+
+            options.incomingStore = manager.incoming;
+            options.outgoingStore = manager.outgoing;
+            
         }
 
         const client = mqtt.connect(config.broker, options);
