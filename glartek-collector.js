@@ -12,9 +12,9 @@ module.exports = function(RED) {
         RED.nodes.createNode(node, config);
 
         // Log current configurations
-        console.log('config.broker: ' + config.broker);
-        console.log('config.id: ' + config.id);
-        console.log('config.topic: ' + config.topic);
+        console.log('glartek-collector: config.broker (' + config.broker + ')');
+        console.log('glartek-collector: config.id  (' + config.id + ')');
+        console.log('glartek-collector: config.topic (' + config.topic + ')');
 
         const options = {
             keepalive: 10,
@@ -38,10 +38,12 @@ module.exports = function(RED) {
 
                 // Create MQTT Store directory
                 fs.mkdirSync(mqttStoreDir, { recursive: true });
+
+                console.log("glartek-collector: Directory created on ", mqttStoreDir);
             }
 
             // Enable MQTT Store
-            const manager = NeDBStore(path.join(mqttStoreDir, 'mqtt'));
+            const manager = NeDBStore(mqttStoreDir);
             
             manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
             manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
