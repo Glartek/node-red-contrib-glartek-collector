@@ -29,6 +29,14 @@ module.exports = function(RED) {
             options.password = config.password;
         }
 
+        if (config.tls) {
+            options.rejectUnauthorized = true;
+            options.ca = config.tlsca || '';
+            options.key = config.tlspriv || '';
+            options.cert = config.tlscert || '';
+            //options.protocol = 'mqtts';
+        }
+
         if (config.store) {
             // Prepare directory for MQTT Store
             const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
