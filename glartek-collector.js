@@ -19,7 +19,7 @@ module.exports = function(RED) {
         const options = {
             keepalive: 10,
             clientId: config.id,
-            clean: false,
+            clean: true,
             connectTimeout: 5 * 1000,
             queueQoSZero: false,
         };
