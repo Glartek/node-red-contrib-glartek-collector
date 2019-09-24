@@ -80,6 +80,10 @@ module.exports = function(RED) {
             node.error(error);
         });
 
+        client.on('disconnect', function () {
+            client.stream.end()
+        });
+
         node.on('input', function(msg) {
             if (msg.payload && typeof msg.payload === 'object') {
                 client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
