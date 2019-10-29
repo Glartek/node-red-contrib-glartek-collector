@@ -15,12 +15,12 @@ module.exports = function(RED) {
 
         // Log current configurations
         console.log('glartek-collector: config.broker (' + config.broker + ')');
-        console.log('glartek-collector: config.id  (' + config.id + ')');
+        console.log('glartek-collector: config.clientid (' + config.clientid + ')');
         console.log('glartek-collector: config.topic (' + config.topic + ')');
 
         const options = {
             keepalive: 10,
-            clientId: config.id,
+            clientId: config.clientid,
             clean: true,
             connectTimeout: 5 * 1000,
             queueQoSZero: false,
