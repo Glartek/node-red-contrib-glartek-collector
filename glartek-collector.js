@@ -11,6 +11,8 @@ module.exports = function(RED) {
 
         RED.nodes.createNode(node, config);
 
+        node.status({});
+
         // Log current configurations
         console.log('glartek-collector: config.broker (' + config.broker + ')');
         console.log('glartek-collector: config.id  (' + config.id + ')');
@@ -70,29 +72,118 @@ module.exports = function(RED) {
             
         }
 
-        const client = mqtt.connect(config.broker, options);
+        // Define functions
+        this.users = {};
 
-        client.on('reconnect', function() {
-            node.warn('reconnect');
-        });
+        this.connect = function () {
+            if (!node.connected && !node.connecting) {
+                node.connecting = true;
+                try {
+                    const client = mqtt.connect(config.broker, options)
+                    node.client = client
 
-        client.on('error', function(error) {
-            node.error(error);
-        });
+                    client.on('connect', function () {
+                        node.connecting = false;
+                        node.connected = true;
+                        node.log(
+                            RED._(
+                                'mqtt.state.connected', 
+                                { broker: ( node.clientid ? node.clientid + '@': '') + node.brokerurl } 
+                            )
+                        );
+                        for (var id in node.users) {
+                            if (node.users.hasOwnProperty(id)) {
+                                node.users[id].status({
+                                    fill: 'green',
+                                    shape: 'dot',
+                                    text: 'node-red:common.status.connected'
+                                });
+                            }
+                        }
+                    });
 
-        client.on('disconnect', function () {
-            client.stream.end()
-        });
+                    client.on('reconnect', function() {
+                        node.connected = false;
+                        node.connecting = true;
 
-        node.on('input', function(msg) {
-            if (msg.payload && typeof msg.payload === 'object') {
-                client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
+                        for (var id in node.users) {
+                            if (node.users.hasOwnProperty(id)) {
+                                node.users[id].status({
+                                    fill: 'yellow',
+                                    shape: 'ring',
+                                    text: 'node-red:common.status.connecting'
+                                });
+                            }
+                        }
+                    });
+
+                    // Register disconnect handlers
+                    client.on('close', function (removed, done) {
+                        if (node.connected) {
+                            node.connected = false;
+                            node.log(
+                                RED._(
+                                    'mqtt.state.disconnected', 
+                                    { broker: (node.clientid ? node.clientid+'@':'') + node.brokerurl } 
+                                )
+                            );
+                            for (var id in node.users) {
+                                if (node.users.hasOwnProperty(id)) {
+                                    node.users[id].status({
+                                        fill: 'red',
+                                        shape: 'ring',
+                                        text: 'node-red:common.status.disconnected'
+                                    });
+                                }
+                            }
+                        } else if (node.connecting) {
+                            node.log(RED._('mqtt.state.connect-failed', { broker: ( node.clientid ? node.clientid + '@' : '') + node.brokerurl } ));
+                        }
+
+                        node.deregister(node, done);
+                    });
+
+                    client.on('error', function(error) {
+                        node.error(error);
+                    });
+
+                    client.on('disconnect', function () {
+                        client.stream.end()
+                    });
+
+                    node.on('input', function(msg) {
+                        if (!client.connected) {
+                            return
+                        }
+
+                        if (msg.payload && typeof msg.payload === 'object') {
+                            client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
+                        }
+                    });
+
+                } catch(err) {
+                    console.log(err);
+                }
             }
-        });
+        };
 
-        GlartekCollectorNode.prototype.close = function() {
-            client.end(true);
-        }
+        this.register = function(mqttNode) {
+            node.users[mqttNode.id] = mqttNode;
+            if (Object.keys(node.users).length === 1) {
+                node.connect();
+            }
+        };
+
+        this.deregister = function(mqttNode) {
+            delete node.users[mqttNode.id];
+            if (Object.keys(node.users).length === 0) {
+                node.client.end();
+                return
+            }
+            return
+        };
+
+        node.register(this);
     }
 
     RED.nodes.registerType('glartek-collector', GlartekCollectorNode);

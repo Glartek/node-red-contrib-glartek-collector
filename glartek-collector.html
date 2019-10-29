@@ -1,28 +1,3 @@
-<script type="text/javascript">
-    RED.nodes.registerType('glartek-collector', {
-        category: 'glartek',
-        color: '#a6bbcf',
-        defaults: {
-            broker: { value: '', required: true },
-            id: { value: '', required: true },
-            topic: { value: '', required: true },
-            username: { value: '', required: false },
-            password: { value: '', required: false },
-            name: { value: '' },
-            store: { value: false, required: false },
-            tls: { value: false, required: false },
-            tlsca: { value: '', required: false },
-            tlscert: { value: '', required: false },
-            tlspriv: { value: '', required: false }
-        },
-        inputs: 1,
-        outputs: 0,
-        icon: 'glartek.png',
-        label: function() {
-            return this.name || 'glartek-collector';
-        }
-    });
-</script>
 
 <script type="text/x-red" data-template-name="glartek-collector">
     <div class="form-row">
@@ -73,6 +48,28 @@
     </div>
 </script>
 
-<script type="text/x-red" data-help-name="glartek-collector">
-    <p>Glartek Collector</p>
+<script type="text/javascript">
+    RED.nodes.registerType('glartek-collector', {
+        category: 'glartek',
+        color: '#a6bbcf',
+        defaults: {
+            broker: { value: '', required: true },
+            id: { value: '', required: true },
+            topic: {value:'', required:true, validate: RED.validators.regex(/^(#$|(\+|[^+#]*)(\/(\+|[^+#]*))*(\/(\+|#|[^+#]*))?$)/)},
+            username: { value: '', required: false },
+            password: { value: '', required: false },
+            name: { value: '' },
+            store: { value: false, required: false },
+            tls: { value: false, required: false },
+            tlsca: { value: '', required: false },
+            tlscert: { value: '', required: false },
+            tlspriv: { value: '', required: false }
+        },
+        inputs: 1,
+        outputs: 0,
+        icon: 'glartek.png',
+        label: function() {
+            return this.name || 'glartek-collector';
+        }
+    });
 </script>
