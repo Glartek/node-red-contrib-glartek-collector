@@ -1,28 +1,3 @@
-<script type="text/javascript">
-    RED.nodes.registerType('glartek-collector', {
-        category: 'glartek',
-        color: '#a6bbcf',
-        defaults: {
-            broker: { value: '', required: true },
-            id: { value: '', required: true },
-            topic: { value: '', required: true },
-            username: { value: '', required: false },
-            password: { value: '', required: false },
-            name: { value: '' },
-            store: { value: false, required: false },
-            tls: { value: false, required: false },
-            tlsca: { value: '', required: false },
-            tlscert: { value: '', required: false },
-            tlspriv: { value: '', required: false }
-        },
-        inputs: 1,
-        outputs: 0,
-        icon: 'glartek.png',
-        label: function() {
-            return this.name || 'glartek-collector';
-        }
-    });
-</script>
 
 <script type="text/x-red" data-template-name="glartek-collector">
     <div class="form-row">
@@ -30,8 +5,8 @@
         <input type="text" id="node-input-broker" placeholder="Broker">
     </div>
     <div class="form-row">
-        <label for="node-input-id"><i class="fa fa-id-card"></i> Client Id</label>
-        <input type="text" id="node-input-id" placeholder="Id">
+        <label for="node-input-clientid"><i class="fa fa-id-card"></i> Client Id</label>
+        <input type="text" id="node-input-clientid" placeholder="Id">
     </div>
     <div class="form-row">
         <label for="node-input-topic"><i class="fa fa-hashtag"></i> Topic</label>
@@ -48,11 +23,6 @@
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
-    </div>
-    <div class="form-row node-text-editor-row">
-        <label for="node-input-store"><i class="fa fa-cog"></i> Store</label>
-        <label for="node-input-store" style="width:70%">
-        <input type="checkbox" id="node-input-store" style="display:inline-block; width:22px; vertical-align:baseline;">Enables MQTT disk store.</label>
     </div>
     <div class="form-row node-text-editor-row">
         <label for="node-input-tls"><i class="fa fa-cog"></i> TLS Enabled</label>
@@ -73,6 +43,32 @@
     </div>
 </script>
 
+<script type="text/javascript">
+    RED.nodes.registerType('glartek-collector', {
+        category: 'glartek',
+        color: '#a6bbcf',
+        defaults: {
+            broker: { value: '', required: true },
+            clientid: { value: '', required: true },
+            topic: {value:'', required:true, validate: RED.validators.regex(/^(#$|(\+|[^+#]*)(\/(\+|[^+#]*))*(\/(\+|#|[^+#]*))?$)/)},
+            username: { value: '', required: false },
+            password: { value: '', required: false },
+            name: { value: '' },
+            //store: { value: false, required: false },
+            tls: { value: false, required: false },
+            tlsca: { value: '', required: false },
+            tlscert: { value: '', required: false },
+            tlspriv: { value: '', required: false }
+        },
+        inputs: 1,
+        outputs: 0,
+        icon: "glartek.png",
+        label: function() {
+            return this.name||"glartek-collector";
+        }
+    });
+</script>
+
 <script type="text/x-red" data-help-name="glartek-collector">
-    <p>Glartek Collector</p>
+    <p>A simple node that forwards data to glartek</p>
 </script>

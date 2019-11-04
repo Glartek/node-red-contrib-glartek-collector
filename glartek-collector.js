@@ -6,19 +6,43 @@ module.exports = function(RED) {
     const mqtt = require('mqtt'),
     NeDBStore = require('mqtt-nedb-store');
 
+    // Node status connected
+    const statusConnected = {
+        fill: 'green',
+        shape: 'dot',
+        text: 'node-red:common.status.connected'
+    }
+
+    // Node status disconnected
+    const statusDisconnected = {
+        fill: 'red',
+        shape: 'ring',
+        text: 'node-red:common.status.disconnected'
+    }
+
+    // Node status reconnection
+    const statusReconnect = {
+        fill: 'yellow',
+        shape: 'ring',
+        text: 'node-red:common.status.connecting'
+    }
+
     function GlartekCollectorNode(config) {
         const node = this;
 
         RED.nodes.createNode(node, config);
 
+        // Clear node status
+        node.status({});
+
         // Log current configurations
         console.log('glartek-collector: config.broker (' + config.broker + ')');
-        console.log('glartek-collector: config.id  (' + config.id + ')');
+        console.log('glartek-collector: config.clientid (' + config.clientid + ')');
         console.log('glartek-collector: config.topic (' + config.topic + ')');
 
         const options = {
             keepalive: 10,
-            clientId: config.id,
+            clientId: config.clientid,
             clean: true,
             connectTimeout: 5 * 1000,
             queueQoSZero: false,
@@ -37,62 +61,120 @@ module.exports = function(RED) {
             //options.protocol = 'mqtts';
         }
 
-        if (config.store) {
-            // Prepare directory for MQTT Store
-            const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
+        // Define functions
+        this.users = {};
 
-            try {
-                if (!fs.existsSync(mqttStoreDir)) {
-                    console.log('glartek-collector: Trying to create directory on ', mqttStoreDir);
+        this.connect = function () {
+            if (!node.connected && !node.connecting) {
+                node.connecting = true;
+                try {
+                    const client = mqtt.connect(config.broker, options)
+                    node.client = client
 
-                    // Create MQTT Store directory
-                    fs.mkdirSync(mqttStoreDir, { recursive: true });
+                    // On mqtt connect
+                    client.on('connect', function () {
+                        node.connecting = false;
+                        node.connected = true;
+                        node.log(
+                            RED._(
+                                'mqtt.state.connected', 
+                                { broker: ( node.clientid ? node.clientid + '@': '') + node.brokerurl } 
+                            )
+                        );
+                        for (var id in node.users) {
+                            if (node.users.hasOwnProperty(id)) {
+                                node.users[id].status(statusConnected);
+                            }
+                        }
+                    });
 
-                    console.log('glartek-collector: Directory created on ', mqttStoreDir);
+                    // On mqtt reconnect
+                    client.on('reconnect', function() {
+                        node.connected = false;
+                        node.connecting = true;
+
+                        for (var id in node.users) {
+                            if (node.users.hasOwnProperty(id)) {
+                                node.users[id].status(statusReconnect);
+                            }
+                        }
+                    });
+
+                    // On mqtt close
+                    client.on('close', function (removed, done) {
+                        // Is connection up?
+                        if (node.connected) {
+                            node.connected = false;
+                            node.log(
+                                RED._(
+                                    'mqtt.state.disconnected', 
+                                    { broker: (node.clientid ? node.clientid+'@':'') + node.brokerurl } 
+                                )
+                            );
+                            for (var id in node.users) {
+                                if (node.users.hasOwnProperty(id)) {
+                                    node.users[id].status(statusDisconnected);
+                                }
+                            }
+                        // Is connecting?    
+                        } else if (node.connecting) {
+                            node.log(
+                                RED._(
+                                    'mqtt.state.connect-failed', 
+                                    { broker: ( node.clientid ? node.clientid + '@' : '') + node.brokerurl } 
+                                )
+                            );
+                        }
+
+                        // Deregister
+                        node.deregister(node, done);
+                    });
+
+                    // On mqtt error
+                    client.on('error', function(error) {
+                        node.error(error);
+                    });
+
+                    // On mqtt disconnect
+                    client.on('disconnect', function () {
+                        client.stream.end()
+                    });
+
+                    node.on('input', function(msg) {
+                        if (!client.connected) {
+                            return
+                        }
+
+                        if (msg.payload && typeof msg.payload === 'object') {
+                            client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
+                        }
+                    });
+
+                } catch(err) {
+                    console.log(err);
                 }
-
-                // HACK: For some reason it is expecting incoming~ and outgoing~ to exist
-                fs.closeSync(fs.openSync(mqttStoreDir + 'incoming~', 'w'))
-                fs.closeSync(fs.openSync(mqttStoreDir + 'outgoing~', 'w'))
             }
-            catch (e) {
-                node.error(e);
+        };
+
+        // Register node
+        this.register = function(mqttNode) {
+            node.users[mqttNode.id] = mqttNode;
+            if (Object.keys(node.users).length === 1) {
+                node.connect();
             }
+        };
 
-            // Enable MQTT Store
-            const manager = NeDBStore(mqttStoreDir);
-            
-            manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
-            manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
-
-            options.incomingStore = manager.incoming;
-            options.outgoingStore = manager.outgoing;
-            
-        }
-
-        const client = mqtt.connect(config.broker, options);
-
-        client.on('reconnect', function() {
-            node.warn('reconnect');
-        });
-
-        client.on('error', function(error) {
-            node.error(error);
-        });
-
-        client.on('disconnect', function () {
-            client.stream.end()
-        });
-
-        node.on('input', function(msg) {
-            if (msg.payload && typeof msg.payload === 'object') {
-                client.publish(config.topic, JSON.stringify([msg.payload]), { qos: 1 });
+        // DeRegister node
+        this.deregister = function(mqttNode) {
+            delete node.users[mqttNode.id];
+            if (Object.keys(node.users).length === 0) {
+                node.client.end();
+                return
             }
-        });
+            return
+        };
 
-        GlartekCollectorNode.prototype.close = function() {
-            client.end(true);
-        }
+        node.register(this);
     }
 
     RED.nodes.registerType('glartek-collector', GlartekCollectorNode);
