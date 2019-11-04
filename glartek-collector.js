@@ -6,11 +6,33 @@ module.exports = function(RED) {
     const mqtt = require('mqtt'),
     NeDBStore = require('mqtt-nedb-store');
 
+    // Node status connected
+    const statusConnected = {
+        fill: 'green',
+        shape: 'dot',
+        text: 'node-red:common.status.connected'
+    }
+
+    // Node status disconnected
+    const statusDisconnected = {
+        fill: 'red',
+        shape: 'ring',
+        text: 'node-red:common.status.disconnected'
+    }
+
+    // Node status reconnection
+    const statusReconnect = {
+        fill: 'yellow',
+        shape: 'ring',
+        text: 'node-red:common.status.connecting'
+    }
+
     function GlartekCollectorNode(config) {
         const node = this;
 
         RED.nodes.createNode(node, config);
 
+        // Clear node status
         node.status({});
 
         // Log current configurations
@@ -39,39 +61,6 @@ module.exports = function(RED) {
             //options.protocol = 'mqtts';
         }
 
-        if (config.store) {
-            // Prepare directory for MQTT Store
-            const mqttStoreDir = path.join(RED.settings.userDir, 'glartek-collector/mqtt');
-
-            try {
-                if (!fs.existsSync(mqttStoreDir)) {
-                    console.log('glartek-collector: Trying to create directory on ', mqttStoreDir);
-
-                    // Create MQTT Store directory
-                    fs.mkdirSync(mqttStoreDir, { recursive: true });
-
-                    console.log('glartek-collector: Directory created on ', mqttStoreDir);
-                }
-
-                // HACK: For some reason it is expecting incoming~ and outgoing~ to exist
-                fs.closeSync(fs.openSync(mqttStoreDir + 'incoming~', 'w'))
-                fs.closeSync(fs.openSync(mqttStoreDir + 'outgoing~', 'w'))
-            }
-            catch (e) {
-                node.error(e);
-            }
-
-            // Enable MQTT Store
-            const manager = NeDBStore(mqttStoreDir);
-            
-            manager.incoming.db.persistence.setAutocompactionInterval(60 * 1000);
-            manager.outgoing.db.persistence.setAutocompactionInterval(60 * 1000);
-
-            options.incomingStore = manager.incoming;
-            options.outgoingStore = manager.outgoing;
-            
-        }
-
         // Define functions
         this.users = {};
 
@@ -82,6 +71,7 @@ module.exports = function(RED) {
                     const client = mqtt.connect(config.broker, options)
                     node.client = client
 
+                    // On mqtt connect
                     client.on('connect', function () {
                         node.connecting = false;
                         node.connected = true;
@@ -93,32 +83,26 @@ module.exports = function(RED) {
                         );
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status({
-                                    fill: 'green',
-                                    shape: 'dot',
-                                    text: 'node-red:common.status.connected'
-                                });
+                                node.users[id].status(statusConnected);
                             }
                         }
                     });
 
+                    // On mqtt reconnect
                     client.on('reconnect', function() {
                         node.connected = false;
                         node.connecting = true;
 
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status({
-                                    fill: 'yellow',
-                                    shape: 'ring',
-                                    text: 'node-red:common.status.connecting'
-                                });
+                                node.users[id].status(statusReconnect);
                             }
                         }
                     });
 
-                    // Register disconnect handlers
+                    // On mqtt close
                     client.on('close', function (removed, done) {
+                        // Is connection up?
                         if (node.connected) {
                             node.connected = false;
                             node.log(
@@ -129,24 +113,29 @@ module.exports = function(RED) {
                             );
                             for (var id in node.users) {
                                 if (node.users.hasOwnProperty(id)) {
-                                    node.users[id].status({
-                                        fill: 'red',
-                                        shape: 'ring',
-                                        text: 'node-red:common.status.disconnected'
-                                    });
+                                    node.users[id].status(statusDisconnected);
                                 }
                             }
+                        // Is connecting?    
                         } else if (node.connecting) {
-                            node.log(RED._('mqtt.state.connect-failed', { broker: ( node.clientid ? node.clientid + '@' : '') + node.brokerurl } ));
+                            node.log(
+                                RED._(
+                                    'mqtt.state.connect-failed', 
+                                    { broker: ( node.clientid ? node.clientid + '@' : '') + node.brokerurl } 
+                                )
+                            );
                         }
 
+                        // Deregister
                         node.deregister(node, done);
                     });
 
+                    // On mqtt error
                     client.on('error', function(error) {
                         node.error(error);
                     });
 
+                    // On mqtt disconnect
                     client.on('disconnect', function () {
                         client.stream.end()
                     });
@@ -167,6 +156,7 @@ module.exports = function(RED) {
             }
         };
 
+        // Register node
         this.register = function(mqttNode) {
             node.users[mqttNode.id] = mqttNode;
             if (Object.keys(node.users).length === 1) {
@@ -174,6 +164,7 @@ module.exports = function(RED) {
             }
         };
 
+        // DeRegister node
         this.deregister = function(mqttNode) {
             delete node.users[mqttNode.id];
             if (Object.keys(node.users).length === 0) {
