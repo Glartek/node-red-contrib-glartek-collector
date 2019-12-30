@@ -67,12 +67,13 @@ module.exports = function(RED) {
         this.connect = function () {
             if (!node.connected && !node.connecting) {
                 node.connecting = true;
+
                 try {
                     const client = mqtt.connect(config.broker, options)
                     node.client = client
 
                     // On mqtt connect
-                    client.on('connect', function () {
+                    node.client.on('connect', function () {
                         node.connecting = false;
                         node.connected = true;
                         node.log(
@@ -89,7 +90,7 @@ module.exports = function(RED) {
                     });
 
                     // On mqtt reconnect
-                    client.on('reconnect', function() {
+                    node.client.on('reconnect', function() {
                         node.connected = false;
                         node.connecting = true;
 
@@ -100,10 +101,9 @@ module.exports = function(RED) {
                         }
                     });
 
-                    // On mqtt close
-                    client.on('close', function (removed, done) {
-                        // Is connection up?
-                        if (node.connected) {
+                    node.client.on('close', function() {
+                         // Is connection up?
+                         if (node.connected) {
                             node.connected = false;
                             node.log(
                                 RED._(
@@ -117,7 +117,9 @@ module.exports = function(RED) {
                                 }
                             }
                         // Is connecting?    
-                        } else if (node.connecting) {
+                        }
+                        
+                        if (node.connecting) {
                             node.log(
                                 RED._(
                                     'mqtt.state.connect-failed', 
@@ -125,18 +127,21 @@ module.exports = function(RED) {
                                 )
                             );
                         }
+                    });
 
+                    // On mqtt close
+                    node.on('close', function (done) {
                         // Deregister
                         node.deregister(node, done);
                     });
 
                     // On mqtt error
-                    client.on('error', function(error) {
+                    node.client.on('error', function(error) {
                         node.error(error);
                     });
 
                     // On mqtt disconnect
-                    client.on('disconnect', function () {
+                    node.client.on('disconnect', function () {
                         client.stream.end()
                     });
 
@@ -165,13 +170,21 @@ module.exports = function(RED) {
         };
 
         // DeRegister node
-        this.deregister = function(mqttNode) {
+        this.deregister = function(mqttNode, done) {
             delete node.users[mqttNode.id];
-            if (Object.keys(node.users).length === 0) {
-                node.client.end();
-                return
+            if (node.closing) {
+                return done();
             }
-            return
+            if (Object.keys(node.users).length === 0) {
+                if (node.client && node.client.connected) {
+                    return node.client.end(done);
+                } else {
+                    node.client.end();
+                    return done();
+                }
+            }
+
+            done();
         };
 
         node.register(this);
