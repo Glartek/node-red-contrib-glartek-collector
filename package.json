@@ -1,9 +1,12 @@
 {
   "name": "node-red-contrib-glartek-collector",
   "description": "Glartek NodeRed IoT Data Collector and Forwarder",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "Apache-2.0",
-  "keywords": [ "node-red", "glartek" ],
+  "keywords": [
+    "node-red",
+    "glartek"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/glartek/node-red-contrib-glartek-collector.git"
