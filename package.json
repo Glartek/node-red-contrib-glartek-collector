@@ -12,7 +12,7 @@
     "url": "https://github.com/glartek/node-red-contrib-glartek-collector.git"
   },
   "dependencies": {
-    "mqtt": "^3.0.0",
+    "mqtt": "^4.2.8",
     "mqtt-nedb-store": "^0.1.1"
   },
   "node-red": {
