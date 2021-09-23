@@ -1,10 +1,8 @@
-module.exports = function(RED) {
-    'use strict';
+import mqtt from 'mqtt';
+import { Red } from 'node-red';
 
-    const path = require('path');
-    const fs = require('fs');
-    const mqtt = require('mqtt'),
-    NeDBStore = require('mqtt-nedb-store');
+module.exports = function(RED: Red) {
+    'use strict';
 
     // Node status connected
     const statusConnected = {
@@ -46,6 +44,12 @@ module.exports = function(RED) {
             clean: true,
             connectTimeout: 5 * 1000,
             queueQoSZero: false,
+            username: '',
+            password: '',
+            rejectUnauthorized: false,
+            ca: '',
+            key: '',
+            cert: ''
         };
 
         if (config.username && config.password) {
@@ -55,9 +59,9 @@ module.exports = function(RED) {
 
         if (config.tls) {
             options.rejectUnauthorized = true;
-            options.ca = config.tlsca || '';
-            options.key = config.tlspriv || '';
-            options.cert = config.tlscert || '';
+            options.ca = config.tlsca;
+            options.key = config.tlspriv;
+            options.cert = config.tlscert;
             //options.protocol = 'mqtts';
         }
 
@@ -116,9 +120,9 @@ module.exports = function(RED) {
                                     node.users[id].status(statusDisconnected);
                                 }
                             }
-                        // Is connecting?    
                         }
                         
+                        // Is connecting?   
                         if (node.connecting) {
                             node.log(
                                 RED._(
@@ -142,7 +146,7 @@ module.exports = function(RED) {
 
                     // On mqtt disconnect
                     node.client.on('disconnect', function () {
-                        client.stream.end()
+                        client.end()
                     });
 
                     node.on('input', function(msg) {
