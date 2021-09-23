@@ -1,32 +1,36 @@
+'use strict';
+
 import mqtt from 'mqtt';
-import { Red } from 'node-red';
+import { Red, NodeStatus } from 'node-red';
+import { CollectorNode, CollectorConfig, MQTTNode } from './types';
 
-module.exports = function(RED: Red) {
-    'use strict';
+enum CollectorStateType {
+    CONNECTED = 'CONNECTED',
+    DISCONNECTED = 'DISCONNECTED',
+    RECONNECT = 'RECONNECT'
+};
 
-    // Node status connected
-    const statusConnected = {
+const status = {
+    [CollectorStateType.CONNECTED]: {
         fill: 'green',
         shape: 'dot',
         text: 'node-red:common.status.connected'
-    }
-
-    // Node status disconnected
-    const statusDisconnected = {
+    } as NodeStatus,
+    [CollectorStateType.DISCONNECTED]: {
         fill: 'red',
         shape: 'ring',
         text: 'node-red:common.status.disconnected'
-    }
-
-    // Node status reconnection
-    const statusReconnect = {
+    } as NodeStatus,
+    [CollectorStateType.RECONNECT]: {
         fill: 'yellow',
-        shape: 'ring',
+        shape: 'dot',
         text: 'node-red:common.status.connecting'
-    }
+    } as NodeStatus
+};
 
-    function GlartekCollectorNode(config) {
-        const node = this;
+export = (RED: Red): void =>
+    RED.nodes.registerType('glartek-collector', function (this: CollectorNode, config: CollectorConfig) {
+        const node: CollectorNode = this;
 
         RED.nodes.createNode(node, config);
 
@@ -65,8 +69,7 @@ module.exports = function(RED: Red) {
             //options.protocol = 'mqtts';
         }
 
-        // Define functions
-        this.users = {};
+        this.users = [];
 
         this.connect = function () {
             if (!node.connected && !node.connecting) {
@@ -75,20 +78,15 @@ module.exports = function(RED: Red) {
                 try {
                     const client = mqtt.connect(config.broker, options)
                     node.client = client
-
+                    
                     // On mqtt connect
                     node.client.on('connect', function () {
                         node.connecting = false;
                         node.connected = true;
-                        node.log(
-                            RED._(
-                                'mqtt.state.connected', 
-                                { broker: ( node.clientid ? node.clientid + '@': '') + node.brokerurl } 
-                            )
-                        );
+                        node.log(`collectorclient.mqtt.state.connected (${node.clientid}@${node.brokerurl})`);
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status(statusConnected);
+                                node.users[id].status(status[CollectorStateType.CONNECTED]);
                             }
                         }
                     });
@@ -100,7 +98,7 @@ module.exports = function(RED: Red) {
 
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status(statusReconnect);
+                                node.users[id].status(status[CollectorStateType.RECONNECT]);
                             }
                         }
                     });
@@ -109,27 +107,17 @@ module.exports = function(RED: Red) {
                          // Is connection up?
                          if (node.connected) {
                             node.connected = false;
-                            node.log(
-                                RED._(
-                                    'mqtt.state.disconnected', 
-                                    { broker: (node.clientid ? node.clientid+'@':'') + node.brokerurl } 
-                                )
-                            );
+                            node.log(`collectorclient.mqtt.state.disconnected (${node.clientid}@${node.brokerurl})`);
                             for (var id in node.users) {
                                 if (node.users.hasOwnProperty(id)) {
-                                    node.users[id].status(statusDisconnected);
+                                    node.users[id].status(status[CollectorStateType.DISCONNECTED]);
                                 }
                             }
                         }
                         
                         // Is connecting?   
                         if (node.connecting) {
-                            node.log(
-                                RED._(
-                                    'mqtt.state.connect-failed', 
-                                    { broker: ( node.clientid ? node.clientid + '@' : '') + node.brokerurl } 
-                                )
-                            );
+                            node.log(`collectorclient.mqtt.state.connect-failed (${node.clientid}@${node.brokerurl})`);
                         }
                     });
 
@@ -166,7 +154,7 @@ module.exports = function(RED: Red) {
         };
 
         // Register node
-        this.register = function(mqttNode) {
+        this.register = function(mqttNode: MQTTNode) {
             node.users[mqttNode.id] = mqttNode;
             if (Object.keys(node.users).length === 1) {
                 node.connect();
@@ -174,14 +162,14 @@ module.exports = function(RED: Red) {
         };
 
         // DeRegister node
-        this.deregister = function(mqttNode, done) {
+        this.deregister = function(mqttNode: MQTTNode, done: mqtt.CloseCallback) {
             delete node.users[mqttNode.id];
             if (node.closing) {
                 return done();
             }
             if (Object.keys(node.users).length === 0) {
                 if (node.client && node.client.connected) {
-                    return node.client.end(done);
+                    return node.client.end(true);
                 } else {
                     node.client.end();
                     return done();
@@ -192,7 +180,4 @@ module.exports = function(RED: Red) {
         };
 
         node.register(this);
-    }
-
-    RED.nodes.registerType('glartek-collector', GlartekCollectorNode);
-}
+    });

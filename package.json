@@ -11,6 +11,15 @@
     "type": "git",
     "url": "https://github.com/glartek/node-red-contrib-glartek-collector.git"
   },
+  "main": "src/index.ts",
+  "scripts": {
+    "postpack": "rm -rf dist/",
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -w -p tsconfig.json"
+  },
+  "files": [
+    "dist/"
+  ],
   "dependencies": {
     "mqtt": "^4.2.8"
   },
