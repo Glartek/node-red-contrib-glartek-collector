@@ -1,7 +1,8 @@
-import { MqttClient } from 'mqtt';
+import { MqttClient, CloseCallback } from 'mqtt';
 import { Node, NodeDef, NodeMessageInFlow } from 'node-red';
 
-export type CollectorNode = { 
+export type CollectorNode = {
+    id: number 
     connecting: boolean
     connected: boolean
     closing: boolean
@@ -10,8 +11,8 @@ export type CollectorNode = {
     client: MqttClient
     users: Node[]
     connect: Function
-    deregister: Function
-    register: Function
+    deregister: (node: CollectorNode, done: CloseCallback) => void | MqttClient
+    register: (node: CollectorNode) => void
 } & Node;
 
 export type CollectorConfig = {
@@ -21,6 +22,9 @@ export type CollectorConfig = {
     username: string;
     password: string;
     tls: boolean;
+    tlsca: string;
+    tlspriv: string;
+    tlscert: string;
 } & NodeDef;
 
 export type MQTTNode = {

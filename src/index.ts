@@ -1,34 +1,11 @@
 'use strict';
 
 import mqtt from 'mqtt';
-import { Red, NodeStatus } from 'node-red';
-import { CollectorNode, CollectorConfig, MQTTNode } from './types';
+import { NodeAPI, NodeAPISettingsWithData } from 'node-red';
+import { CollectorNode, CollectorConfig, MQTTNode } from './lib/types';
+import { CollectorState, CollectorStateType } from './lib/data';
 
-enum CollectorStateType {
-    CONNECTED = 'CONNECTED',
-    DISCONNECTED = 'DISCONNECTED',
-    RECONNECT = 'RECONNECT'
-};
-
-const status = {
-    [CollectorStateType.CONNECTED]: {
-        fill: 'green',
-        shape: 'dot',
-        text: 'node-red:common.status.connected'
-    } as NodeStatus,
-    [CollectorStateType.DISCONNECTED]: {
-        fill: 'red',
-        shape: 'ring',
-        text: 'node-red:common.status.disconnected'
-    } as NodeStatus,
-    [CollectorStateType.RECONNECT]: {
-        fill: 'yellow',
-        shape: 'dot',
-        text: 'node-red:common.status.connecting'
-    } as NodeStatus
-};
-
-export = (RED: Red): void =>
+export = (RED: NodeAPI<NodeAPISettingsWithData>): void =>
     RED.nodes.registerType('glartek-collector', function (this: CollectorNode, config: CollectorConfig) {
         const node: CollectorNode = this;
 
@@ -86,7 +63,7 @@ export = (RED: Red): void =>
                         node.log(`collectorclient.mqtt.state.connected (${node.clientid}@${node.brokerurl})`);
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status(status[CollectorStateType.CONNECTED]);
+                                node.users[id].status(CollectorState[CollectorStateType.CONNECTED]);
                             }
                         }
                     });
@@ -98,7 +75,7 @@ export = (RED: Red): void =>
 
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status(status[CollectorStateType.RECONNECT]);
+                                node.users[id].status(CollectorState[CollectorStateType.RECONNECT]);
                             }
                         }
                     });
@@ -110,7 +87,7 @@ export = (RED: Red): void =>
                             node.log(`collectorclient.mqtt.state.disconnected (${node.clientid}@${node.brokerurl})`);
                             for (var id in node.users) {
                                 if (node.users.hasOwnProperty(id)) {
-                                    node.users[id].status(status[CollectorStateType.DISCONNECTED]);
+                                    node.users[id].status(CollectorState[CollectorStateType.DISCONNECTED]);
                                 }
                             }
                         }
@@ -122,7 +99,7 @@ export = (RED: Red): void =>
                     });
 
                     // On mqtt close
-                    node.on('close', function (done) {
+                    node.on('close', function (done: mqtt.CloseCallback) {
                         // Deregister
                         node.deregister(node, done);
                     });
@@ -154,16 +131,16 @@ export = (RED: Red): void =>
         };
 
         // Register node
-        this.register = function(mqttNode: MQTTNode) {
-            node.users[mqttNode.id] = mqttNode;
+        this.register = function(node: CollectorNode) {
+            node.users[node.id] = node;
             if (Object.keys(node.users).length === 1) {
                 node.connect();
             }
         };
 
         // DeRegister node
-        this.deregister = function(mqttNode: MQTTNode, done: mqtt.CloseCallback) {
-            delete node.users[mqttNode.id];
+        this.deregister = function(node: CollectorNode, done: mqtt.CloseCallback) {
+            delete node.users[node.id];
             if (node.closing) {
                 return done();
             }
