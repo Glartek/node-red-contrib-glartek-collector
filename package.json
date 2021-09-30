@@ -11,21 +11,24 @@
     "type": "git",
     "url": "https://github.com/glartek/node-red-contrib-glartek-collector.git"
   },
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "postpack": "rm -rf dist/",
     "build": "tsc -p tsconfig.json",
-    "build:watch": "tsc -w -p tsconfig.json"
+    "build:watch": "tsc -w -p tsconfig.json",
+    "postbuild": "yarn copyHtml && yarn copyIcons",
+    "copyHtml": "mkdir -p dist/ && cp -a src/index.html dist/",
+    "copyIcons": "mkdir -p dist/icons && cp -a icons/. dist/icons"
   },
   "files": [
     "dist/"
   ],
   "dependencies": {
-    "mqtt": "^4.2.8"
+    "mqtt": "https://github.com/Glartek/MQTT.js#a931f79"
   },
   "node-red": {
     "nodes": {
-      "glartek-collector": "glartek-collector.js"
+      "glartek-collector": "dist/index.js"
     }
   },
   "engines": {
