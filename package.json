@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-glartek-collector",
   "description": "Glartek NodeRed IoT Data Collector and Forwarder",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "license": "Apache-2.0",
   "keywords": [
     "node-red",
@@ -11,16 +11,32 @@
     "type": "git",
     "url": "https://github.com/glartek/node-red-contrib-glartek-collector.git"
   },
+  "main": "dist/index.js",
+  "scripts": {
+    "postpack": "rm -rf dist/",
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -w -p tsconfig.json",
+    "postbuild": "yarn copyHtml && yarn copyIcons",
+    "copyHtml": "mkdir -p dist/ && cp -a src/index.html dist/",
+    "copyIcons": "mkdir -p dist/icons && cp -a icons/. dist/icons"
+  },
+  "files": [
+    "dist/"
+  ],
   "dependencies": {
-    "mqtt": "^3.0.0",
-    "mqtt-nedb-store": "^0.1.1"
+    "mqtt": "https://github.com/Glartek/MQTT.js#a931f79"
   },
   "node-red": {
     "nodes": {
-      "glartek-collector": "glartek-collector.js"
+      "glartek-collector": "dist/index.js"
     }
   },
   "engines": {
     "node": ">=10"
+  },
+  "devDependencies": {
+    "@types/node": "^16.9.6",
+    "@types/node-red": "^1.1.1",
+    "typescript": "^4.4.3"
   }
 }

@@ -2,8 +2,7 @@
 Glartek Collector allows to injest data into Glartek ecosystem. This is the Node-Red version.
 
 ## Dependency
-- mqtt 3.0.0
-- mqtt-nedb-store 0.1.1
+- mqtt 4.2.8
 
 ## Installation
 `npm install node-red-contrib-glartek-collector`
